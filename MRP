@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+from simple_term_menu import TerminalMenu
+from io import StringIO
+import threading
+import csv
+import os
+import readline
+import netmiko
+import getpass
+from netmiko import ConnectHandler
+from netmiko import NetMikoTimeoutException
+
+files = []
+options = []
+ips = []
+user:str = None
+ip:str = None
+down = False
+
+def auth():
+    print("## MPR v1.5 ##")
+    username = input("Enter your username:")
+    password = getpass.getpass("Password:")
+    return username, password
+
+def menu():    
+    file = os.listdir("/srv/files/MPR_RINGS")
+    for rings in file:
+        options.append(rings)
+    terminal_menu = TerminalMenu(options)
+    menu_entry_index = terminal_menu.show()
+    option = options[menu_entry_index]
+    return option
+    
+def data(sel):
+    csv_file = open(f'/srv/files/MPR_RINGS/{sel}', 'r')
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        host,ip = row
+        #print(host)
+        my_thread = threading.Thread(target=process, args=(host, ip, user, password))
+        my_thread.start()
+    csv_file.close()
+    print(f"Verifying {sel}.... ")
+
+def process(host, ip, user, password):
+       
+        cisco = {
+        'device_type': 'cisco_ios',
+        'ip': ip, 
+        'username': user,
+        'password': password
+        }
+        try:
+            down = False
+            net_connect = ConnectHandler(**cisco)
+            # grabs hostname from run file for consistency.
+            terminal_len = net_connect.send_command("terminal length 0")
+            hostname = net_connect.send_command("sho run | i hostname")
+            host_string = StringIO(hostname) 
+            host_read = host_string.readlines()
+            length = len(host_read)
+            host = host_read[length -1 ][9::] 
+
+            output = net_connect.send_command(f"sho int description | i {host}")  
+            #print(output)       
+            string = StringIO(output)
+            lst = string.readlines()
+            
+            for text in lst:
+                #print('before filter',text)
+                if 'admin-down' in text and 'up' in text:
+                    #print("up|down process",text)
+                    pass
+                elif 'down' in text:
+                    #print("down process:",text)
+                    if 'Hu' not in text and 'TF' not in text:
+                        continue
+                    down = True
+                    print(host)
+                    print(f"Interface showing down: {text}\n")
+            
+            if not down:
+                print(f"{host}: OK")
+                    
+                net_connect.disconnect() 
+            
+        except (NetMikoTimeoutException):
+            print(f'Unable to connect to {ip}')
+            exit()
+        except netmiko.NetmikoAuthenticationException:
+            print("Authentication error! Exiting...")
+            exit()
+                   
+if __name__ == "__main__":
+     user,password = auth()
+selection = menu()
+data(selection) 
