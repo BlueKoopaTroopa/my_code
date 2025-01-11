@@ -1,0 +1,142 @@
+import time
+import netmiko
+import command
+import data
+import logging
+from data import Authorize
+from data import HostData
+from data import screen_clear
+from data import active_timer
+from data import job
+
+def stage():
+    job_input = job()
+    timestamp = active_timer()
+    ## formatting ##
+    prestage_title = data.prestage_title
+    bo = data.bo
+    bc = data.bc
+    print(f'\n\t{timestamp} ### {bo}{prestage_title}{bc} {data.lx_update_firmware} CW:{job_input}###')
+    host_data = HostData()
+    active_firmware = None
+    firmware_download = None
+    verify = None
+    device_type = data.device_type
+    username,password  = Authorize()
+
+    for IP in host_data.host_list:
+        timestamp = active_timer()
+        NID = {
+            'device_type': device_type,
+            'ip': IP,
+            'username': username,
+            'password': password,
+        }
+
+        try:
+            logging.basicConfig(filename='pre_stage.log',level=logging.INFO)
+            screen_clear()
+            to_download = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} {IP} to download {data.lx_update_firmware} ###')
+            logging.info(to_download)
+            print(f'{timestamp}',to_download)
+            net_connect = netmiko.ConnectHandler(**NID)
+            firmware_check = net_connect.send_command(command_string=command.firmware)
+            ## looks for the line current version in the matched output ##
+            for matched in firmware_check.split('\n'):
+                if "Current version" in matched:
+                    _, active_firmware = matched.split(':', 1)
+                    active_firmware = active_firmware.strip()
+                    break
+            ## Matches the output the command firmware version and initates firmware download upon a match showing NID is running the older firmware that is being replaced ##
+            if active_firmware != data.lx_legacy_firmware:
+                out_of_scope = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} {IP} running {active_firmware} is out of scope. No action taken... ###')
+                logging.info(out_of_scope)
+                print(out_of_scope)
+                continue
+
+            elif active_firmware == data.lx_update_firmware:
+                is_updted = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} {IP} has {data.lx_update_firmware} active. No action taken... ###')
+                logging.info(is_updted)
+                print(is_updted)
+                continue
+                # Add a write statement to log the error.
+
+            elif active_firmware != data.lx_update_firmware:
+                to_verify = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} Verifying if there is firmware downloaded... ###')
+                logging.info(to_verify)
+                print(to_verify)
+
+                verify = net_connect.send_command(command_string=command.firmware)
+                for matched in verify.split('\n'):
+                    if "Downloaded version" in matched:
+                        _, verify = matched.split(':', 1)
+                        verify = verify.strip()
+                        break
+
+            if verify == data.lx_update_firmware:
+                is_downloaded = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} Verify STOP! ### \n\t### {bo}{prestage_title}{bc} {IP} has updated firmware already downloaded and ready for activation ###')
+                logging.info(is_downloaded)
+                print(is_downloaded)
+                continue
+
+            ## Verifies there is firmware already downloaded.
+            if verify == data.lx_download_empty:
+                verify_ok = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} \033[1mVerify OK!\033[0m ###')
+                logging.info(verify_ok)
+                print(verify_ok)
+                time.sleep(data.clear_timer)
+                download_start = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} {IP} will now begin downloading {data.lx_update_firmware}. Please standby... ###')
+                logging.info(download_start)
+                print(download_start)
+                firmware_download = net_connect.send_command(command_string=command.lx_download)
+
+            if verify != data.lx_download_empty:
+                verify_STOP = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} \033[1mVerify STOP! Unknown firmware in download memory.\033[0m \n\tManually clear downloaded firmware using the command "firmware clear-download" ###')
+                logging.info(verify_STOP)
+                print(verify_STOP)
+                continue
+
+            if firmware_download == data.ftp_noConnect_error:
+                ftp_no_connection = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} No connection could be made to the FTP server. \n\tPlease verify the server. Closing program... ###')
+                logging.info(ftp_no_connection)
+                print(ftp_no_connection)
+                quit()
+
+            while verify != data.lx_update_firmware:
+                time.sleep(data.clear_timer)
+                verify = net_connect.send_command(command_string=command.firmware)
+                for matched in verify.split('\n'):
+                    if "Downloaded version" in matched:
+                        _, verify = matched.split(':', 1)
+                        verify = verify.strip()
+                        break
+
+            if firmware_download == data.ftp_finish_successful:
+                download_complete = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc}{IP}:{data.lx_update_firmware} Download completed! ###')
+                logging.info(download_complete)
+                print(download_complete)
+                screen_clear()
+                continue
+
+            if firmware_download != data.ftp_finish_successful:
+                print('Downloading.....')
+
+        ## Netmiko execption error handling ##
+        except netmiko.NetmikoTimeoutException:
+            connection_timeout = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} Connection to {IP} has timed out! Establishing connection to the next NID... ### ')
+            logging.info(connection_timeout)
+            print(connection_timeout)
+            continue
+        except netmiko.NetmikoAuthenticationException:
+            auth_fail = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} Authentication failed. Check credentials. Closing program. ###')
+            logging.info(auth_fail)
+            print(auth_fail)
+            exit()
+        except OSError as error:
+            print(error, IP)
+            exit()
+
+    prestage_complete = (f'\n\t{timestamp} ### {bo}{prestage_title}{bc} {data.lx_update_firmware} Downloads completed! CW:{job_input} ###')
+    logging.info(prestage_complete)
+    print(prestage_complete)
+    quit()
