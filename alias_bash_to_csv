@@ -1,0 +1,25 @@
+import re
+
+alias_list = []
+with open('.bash_profile', 'r') as rf:
+    for line in rf:
+        line = line.strip()  
+        if line and not line.startswith('#'):
+            filtered_line = re.sub(r'\balias\b|\bssh\b|\btelnet\b|\'', '', line)
+            filtered_line = filtered_line.replace('=', ',')
+            #filtered_line = filtered_line.replace("_", ",")
+            filtered_line = filtered_line.replace("@", ",")
+            filtered_line = filtered_line.replace('_9902', '')
+            filtered_line = filtered_line.replace(' ', '')
+            alias_list.append(filtered_line)
+        if line and line.startswith('# ACCEDIAN DEVICES'):
+           break
+    for line in alias_list:
+        print(line.upper())
+    with open('/home/david.park/Data/alias_list.csv','w') as f:
+        for line in alias_list:
+            if line and line.startswith('cls'):
+                continue
+            else:
+                print(line)
+                f.write(line.strip().upper() + "\n")
