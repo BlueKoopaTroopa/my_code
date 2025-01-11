@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+import pandas as pd
+import csv
+import json
+import readline
+import os
+
+build = "4.0.2"
+json_file = '/srv/files/alias/alias.json'
+
+def version():
+    print(f'\n\t* LOOKUP build {build}\n')
+    main()
+
+def screen_clear():
+    if os.name == 'posix':
+        _ = os.system('clear')
+        main()
+
+def man():
+    optionset = {'About - Program build','Clear - Clear screen','Quit- Exit program'}
+    print(f'Available commands:\n\n{optionset}',sep="")
+    main()
+
+def allnet(file_path, string_to_match):
+    labels = ['Network', 'Netmask', 'comment', 'DHCP Server']
+    print(' \n{} '.format((labels)))
+    index = [1,2,8,12,47]
+    found_match = False
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        for line in reader:
+            if string_to_match in line:
+                #matchlist = list(line.split(','))
+                found_match = True
+                separated_fields = [string_to_match.strip() for string_to_match in line]
+                print([separated_fields[i] for i in index])
+                #print(' {}'.format([matchlist[i] for i in index]))
+
+    if found_match:
+        print(f'\n#### Search in {file_path} complete. ####\n')
+    else:
+        print(f'\n#### No matches found in {file_path}. ####\n')
+
+def sharednet(file_path, string_to_match):
+    labels = ['Network', 'Netmask', 'comment', 'DHCP Server']
+    print(' \n{} '.format((labels)))
+    index = [1,2,8,12,47]
+    found_match = False
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        for line in reader:
+            if string_to_match in line:
+                #matchlist = list(line.split(','))
+                found_match = True
+                separated_fields = [string_to_match.strip() for string_to_match in line]
+                print([separated_fields[i] for i in index])
+                #print(' {}'.format([matchlist[i] for i in index]))
+
+    if found_match:
+        print(f'\n#### Search in {file_path} complete. ####\n')
+    else:
+        print(f'\n#### No matches found in {file_path}. ####\n')
+
+def search_json(string_to_match, json_file):
+    matches = []
+    with open(json_file, 'r') as file:
+        data = json.load(file)
+        for entry in data:
+            if string_to_match.lower() in str(entry).lower():  # Search in all fields
+                matches.append(entry)
+    return matches
+
+def alias_json():
+    results = search_json(string_to_match, json_file)
+    if results:
+        print(f'\n#### Search in {json_file} complete. ####\n')
+        for result in results:
+            print('\n',result)
+    else:
+        print(f'\n#### No matches found in {json_file}. ####\n')
+
+def alias_csv(file_path, string_to_match):
+    found_match = False
+    labels = ['Device name', 'IP']
+    print(' \n{} '.format((labels)))
+    with open(file_path, 'r') as file:
+        file_read = csv.reader(file)
+        for line in file_read:
+            if string_to_match in line:
+                found_match = True
+                print(line)
+
+    if found_match:
+        print(f'\n#### Search in {file_path} complete. ####\n')
+    else:
+        print(f'\n#### No matches found in {file_path}. ####\n')
+
+def alias(file_path, string_to_match):
+    labels =['Device name','IP']
+    print(' \n{} '.format((labels)))
+    index = [0,1]
+    found_match = False
+    with open(file_path, 'r') as file:
+        for line in file:
+            if string_to_match in line:
+                matchlist = list(line.split(','))
+                found_match = True
+                print(' {}'.format([matchlist[i] for i in index]))
+
+    if found_match:
+        print(f'\n#### Search in {file_path} complete.This file query is being phased out. DB no longer updated.  ####\n')
+    else:
+        print(f'\n#### No matches found in {file_path}. This file query is being phased out. DB no longer updated. ####\n')
+
+def accedian(file_path, string_to_match):
+    labels =['Device name','Device Label','Serial Number','Model','IP','FIRMWARE Version']
+    print(' \n{} '.format((labels)))
+    index = [0,1,2,5,3,4]
+    found_match = False
+    df = pd.read_csv(file_path)
+    for _, row in df.iterrows():
+        line = ','.join(map(str, row))
+        if string_to_match in line:
+            matchlist = list(line.split(','))
+            found_match = True
+            print(' {}'.format([matchlist[i] for i in index]))
+
+    if found_match:
+        print(f'\n#### Search in {file_path} complete. ####\n')
+    else:
+        print(f'\n#### No matches found in {file_path}. ####\n')
+
+def ports(file_path, string_to_match):
+    labels =['Device name','Device Label','Serial Number','Port name','MAC address']
+    print(' \n{} '.format((labels)))
+    index = [0,1,2,4,7]
+    found_match = False
+    df = pd.read_csv(file_path)
+    for _, row in df.iterrows():
+        line = ','.join(map(str, row))
+        if string_to_match in line:
+            matchlist = list(line.split(','))
+            found_match = True
+            print(' {}'.format([matchlist[i] for i in index]))
+
+    if found_match:
+        print(f'\n#### Search in {file_path} complete. ####\n')
+    else:
+        print(f'\n#### No matches found in {file_path}. ####\n')
+
+def regs(file_path, string_to_match):
+    labels =['Device name','Device Label','Name','CIR','CIRMAX','CBS','EIR','EIRMAX']
+    print(' \n{} '.format((labels)))
+    index = [0,1,4,5,6,7,8,9,10]
+    found_match = False
+    df = pd.read_csv(file_path)
+    for _, row in df.iterrows():
+        line = ','.join(map(str, row))
+        if string_to_match in line:
+            matchlist = list(line.split(','))
+            found_match = True
+            print(' {}'.format([matchlist[i] for i in index]))
+
+    if found_match:
+        print(f'\n#### Search in {file_path} complete. ####\n')
+    else:
+        print(f'\n#### No matches found in {file_path}. ####\n')
+
+def vidsets(file_path, string_to_match):
+    labels =["Device name",'Device Label',"Name","Policy list","Policy index","VIDs","Outer VLAN ID"]
+    print(' \n{} '.format((labels)))
+    index = [0,1,4,5,11,6,9]
+    found_match = False
+    df = pd.read_csv(file_path)
+    for _, row in df.iterrows():
+        line = ','.join(map(str, row))
+        if string_to_match in line:
+            matchlist = list(line.split(','))
+            found_match = True
+            print(' {}'.format([matchlist[i] for i in index]))
+
+    if found_match:
+        print(f'\n#### Search in {file_path} complete. ####\n')
+    else:
+        print(f'\n#### No matches found in {file_path}. ####\n')
+
+
+def main():
+    global string_to_match
+
+    print('\n\n##### LOOKUP #####')
+    print('type "help" and Enter to get a list of available commands.')
+    string_to_match = input("\nType in your search then press Enter.... :")
+
+    if not string_to_match:
+        print('Please enter something to search for or type "QUIT" and press enter to end program....')
+        main()
+
+    if string_to_match.lower() == 'quit':
+        quit()
+    elif string_to_match.lower() == 'exit':
+        quit()
+    elif string_to_match.lower() == 'clear':
+        screen_clear()
+    elif string_to_match.lower() == 'help':
+        man()
+    elif string_to_match.lower() == 'about':
+        version()
+
+    else:
+        #alias_json()
+        #alias_csv('/home/david.park/Data/alias_list.csv', string_to_match.upper())
+        alias('/home/david.park/Data/alias_list.csv', string_to_match.upper())
+        accedian('/srv/files/alias/MANAGEDELEMENTBASE.csv', string_to_match.upper())
+        ports('/srv/files/alias/skylight_exports/Ports.csv', string_to_match.upper())
+        vidsets('/srv/files/alias/skylight_exports/VID sets.csv', string_to_match.upper())
+        regs('/srv/files/alias/skylight_exports/Bandwidth regulators.csv',string_to_match.upper())
+        #allnet('/srv/files/alias/infoblox_export/Allnetworks.csv',string_to_match.upper())
+        #sharednet('/srv/files/alias/infoblox_export/Allsharednetworks.csv',string_to_match.upper())
+        main()
+
+
+if __name__ == "__main__":
+    main()
